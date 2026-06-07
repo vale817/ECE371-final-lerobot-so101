@@ -19,9 +19,9 @@
 
 ## 流程总览
 
-1. 本地（Mac）把数据集上传到 HuggingFace —— `scripts/upload_to_hf.sh`
+1. 本地（Mac）把数据集上传到 HuggingFace —— `train/upload_to_hf.sh`
 2. GPU 服务器装好 lerobot 并拉取数据集
-3. 服务器跑训练 —— `scripts/train_act.sh`
+3. 服务器跑训练 —— `train/train_act.sh`
 4. 监控 → 取 checkpoint → 回机械臂上评估
 
 ---
@@ -31,7 +31,7 @@
 ```bash
 pip install -U "huggingface_hub[cli]"
 hf auth login            # 粘贴 WRITE token: https://huggingface.co/settings/tokens
-bash scripts/upload_to_hf.sh
+bash train/upload_to_hf.sh
 ```
 
 成功后数据集在 `https://huggingface.co/datasets/Valaris1028/task1_grab`，
@@ -43,7 +43,9 @@ bash scripts/upload_to_hf.sh
 ## 2. GPU 服务器环境
 
 ```bash
-pip install -U "lerobot[act]"     # 或从 lerobot checkout: pip install -e ".[act]"
+python3.11 -m venv .venv
+source .venv/bin/activate
+pip install -U pip "lerobot[act]" # 或从 lerobot checkout: pip install -e ".[act]"
 hf auth login                     # 数据集私有时才需要；用来拉数据集 / 推策略
 nvidia-smi                        # 确认 GPU 可见
 ```
@@ -51,7 +53,11 @@ nvidia-smi                        # 确认 GPU 可见
 ## 3. 训练
 
 ```bash
-bash scripts/train_act.sh
+# 先跑 100 steps，确认下载、视频解码、显存和模型 forward 正常
+JOB=act_task1_grab_smoke STEPS=100 BATCH_SIZE=2 SAVE_FREQ=100 bash train/train_act.sh
+
+# smoke test 通过后正式训练；两个任务使用不同输出目录
+bash train/train_act.sh
 ```
 
 核心命令（脚本里已写好）：
@@ -64,6 +70,9 @@ lerobot-train \
   --job_name=act_task1_grab \
   --policy.device=cuda \
   --policy.push_to_hub=false \
+  --dataset.image_transforms.enable=true \
+  --dataset.image_transforms.max_num_transforms=1 \
+  --dataset.image_transforms.tfs='{"resize":{"weight":1.0,"type":"Resize","kwargs":{"size":[360,640]}}}' \
   --batch_size=8 \
   --steps=100000 \
   --save_freq=10000 \
@@ -72,11 +81,13 @@ lerobot-train \
 
 要点：
 
-- ACT 会**自动从数据集里识别两个相机**，无需手动配置相机。
+- ACT 会自动识别两个相机。原始分辨率分别为 480×640 和 360×640，脚本会把两路都
+  resize 到 360×640；ACT 多相机编码要求两路特征 token 数一致，不能直接省略这个步骤。
 - 默认 `chunk_size`/`n_action_steps=100`，SO-101 抓取任务够用；想缩短预测窗口加
   `--policy.chunk_size=50 --policy.n_action_steps=50`。
 - 想看训练曲线：`--wandb.enable=true`（先 `wandb login`）。
-- 中断后续训：保持同一 `output_dir`，加 `--resume=true`。
+- 中断后续训：
+  `lerobot-train --config_path=outputs/train/act_task1_grab/checkpoints/last/pretrained_model/train_config.json --resume=true`。
 - 显存吃紧就调小 `--batch_size`（如 4），双相机 + AV1 解码占用会高一些。
 
 ## 4. 评估（回到机械臂）
