@@ -43,7 +43,9 @@ The demonstrations use LeRobot Dataset v3. Task 2 combines the two color dataset
 
 | Member | Contributions |
 | --- | --- |
-| **Guo Yi** (team lead) | Set up LeRobot, managed the datasets, ran initial ACT training, and led slide preparation. |
+| **Guo Yi** (team lead) | Designed the experiments, set up LeRobot, managed the datasets, ran initial ACT training, and led slide preparation. |
 | **He Jialiang** | Set up the test bench and evaluation environment, trained Task 1 ACT and ran its augmentation ablation, reviewed failure videos, and contributed to the slides. |
 | **Zhang Qi** | Trained Task 2 SmolVLA and ran its augmentation ablation, monitored training loss, helped collect Task 2 demonstrations and set up the test bench, and evaluated Task 2 on the robot. |
 | **Chen Cai** | Assembled and wired the SO-101, calibrated the arm and configured both cameras, collected teleoperated demonstrations, ran real-robot evaluations, and contributed to the presentation. |
+
+The team discussed the training strategy and reviewed evaluation errors together.
